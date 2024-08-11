@@ -20,6 +20,9 @@ class ToastificationManager {
 
   OverlayEntry? _overlayEntry;
 
+  /// keeps list of toasts that are waiting for overlay to be shown
+  final List<String> _queue = [];
+  
   /// this key is attached to [AnimatedList] so we can add or remove items using it.
   final _listGlobalKey = GlobalKey<AnimatedListState>();
 
@@ -60,10 +63,12 @@ class ToastificationManager {
 
       delay = const Duration(milliseconds: 300);
     }
-
+    _queue.add(item.id);
     Future.delayed(
       delay,
       () {
+        if (!_queue.contains(item.id)) return;
+        removeQueue(item.id);
         _notifications.insert(0, item);
 
         _listGlobalKey.currentState?.insertItem(
@@ -76,6 +81,10 @@ class ToastificationManager {
     // TODO(payam): add limit count feature
 
     return item;
+  }
+
+  void removeQueue(String id) {
+    _queue.remove(id);
   }
 
   /// Finds the [ToastificationItem] with the given [id].
@@ -101,6 +110,7 @@ class ToastificationManager {
     ToastificationItem notification, {
     bool showRemoveAnimation = true,
   }) {
+    removeQueue(notification.id);
     final index = _notifications.indexOf(notification);
 
     if (index != -1) {
@@ -159,6 +169,7 @@ class ToastificationManager {
     // Creates a new list cloneList that has all the notifications from the _notifications list, but in reverse order.
     final cloneList = _notifications.toList(growable: false).reversed;
 
+    _queue.clear();
     // For each cloned "toastItem" notification in "cloneList",
     // we will remove it and then pause for a duration if delayForAnimation is true.
     for (final toastItem in cloneList) {
